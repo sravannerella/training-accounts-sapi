@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="getAccountsImplementationFlow" doc:id="3937edd4-c7dd-4c44-b39f-967e055182bd" >
+		<db:select doc:name="flights_customers" doc:id="d7e780d9-8adf-400a-ba1a-6ed8144a3adf" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * FROM flights_customers WHERE accountType = :accountType]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	accountType: vars.accountType
+}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="to JSON" doc:id="06fcbc72-7a05-4961-881c-0189b90a8a30" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map (item, index) -> {
+	id: item.accountID,
+	accountType: item.accountType,
+	name: item.name,
+	address: ((((item.street default "") ++ ", " ++ (item.city default "")) ++ ", " ++ (item.state default "")) ++ ", " ++ (item.country default "") ++ ", " ++ (item.postal default "")),
+	airMiles: item.miles,
+	creationDate: item.creationDate
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="postAccountsImplementationFlow" doc:id="7727c054-c03b-44c9-b77a-60febfb86f8a" >
+		<ee:transform doc:name="to flight_customers table schema" doc:id="31413fb1-5be6-4065-adec-8fe8dcbebe06" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+var address = payload.address splitBy ","
+---
+{
+	accountType: payload.accountType,
+	name: payload.name,
+	miles: payload.airMiles as String,
+	street: address[0],
+	city: address[1],
+	state: address[2],
+	country: address[3],
+	postal: address[4]
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<db:insert doc:name="flights_customers" doc:id="33ee653a-04f2-4368-be98-fa06547f015c" config-ref="Database_Config">
+			<db:sql ><![CDATA[INSERT INTO flights_customers(name, accountType, miles, street, city, state, country, postal)
+VALUES (:name, :accountType, :miles, :street, :city, :state, :country, :postal)]]></db:sql>
+			<db:input-parameters ><![CDATA[#[payload]]]></db:input-parameters>
+		</db:insert>
+		<ee:transform doc:name="Account Created Response, vars: httpStatus - 201" doc:id="ffd277ad-381d-4a97-b176-2fc1e547339b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "Account Created",
+	timestamp: now()
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="httpStatus" ><![CDATA[%dw 2.0
+output application/java
+---
+201]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</flow>
+	<flow name="getAccountByIdImplementationFlow" doc:id="0000af8f-2274-40f0-b2eb-82fd8ac2e429" >
+		<db:query-single doc:name="flights_customers By ID" doc:id="776008ed-5a49-4a21-83e4-38f69b0d4e29" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * FROM flights_customers WHERE accountID = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: vars.id
+}]]]></db:input-parameters>
+		</db:query-single>
+		<ee:transform doc:name="to JSON" doc:id="8e21a0c0-3d09-4764-a025-80f777976414" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	id: payload.accountID,
+	accountType: payload.accountType,
+	name: payload.name,
+	address: (payload.street default "") ++ ", " ++ (payload.city default "") ++ ", " ++ (payload.state default "") ++ ", " ++ (payload.country default "") ++ ", " ++ (payload.postal default ""),
+	airMiles: payload.miles,
+	creationDate: payload.creationDate
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>

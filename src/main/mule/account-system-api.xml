@@ -1,17 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
-    <http:listener-config name="account-system-api-httpListenerConfig">
-        <http:listener-connection host="0.0.0.0" port="8081" />
-    </http:listener-config>
-    <apikit:config name="account-system-api-config" api="resource::4edd8c9b-c33d-4aed-a4c9-e84ef1811f17:Account-System-API:1.0.0:raml:zip:account-system-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
     <flow name="account-system-api-main">
         <http:listener config-ref="account-system-api-httpListenerConfig" path="/api/*">
             <http:response statusCode="#[vars.httpStatus default 200]">
-                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
             </http:response>
             <http:error-response statusCode="#[vars.httpStatus default 500]">
-                <http:body>#[payload]</http:body>
-                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+                <http:body><![CDATA[#[output json --- error.detailedDescription]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
             </http:error-response>
         </http:listener>
         <apikit:router config-ref="account-system-api-config" />
@@ -124,29 +120,18 @@ output application/json
         </error-handler>
     </flow>
     <flow name="get:\accounts:account-system-api-config">
-        <logger level="INFO" message="get:\accounts:account-system-api-config" />
+        <set-variable value="#[attributes.queryParams.accountType]" doc:name="accountType" doc:id="6350d92b-42b4-40fe-8e03-ef71281a79e4" variableName="accountType"/>
+		<flow-ref doc:name="getAccountsImplementationFlow" doc:id="b7926fce-30b5-4125-a1e4-7a5503d1551c" name="getAccountsImplementationFlow"/>
     </flow>
     <flow name="get:\accounts\(id):account-system-api-config">
-        <ee:transform>
+        <ee:transform doc:name="vars: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <ee:transform>
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-  name: "Openlogix",
-  accountType: "personal",
-  address: "645 Hulet Dr, Bloomfield Hills, MI",
-  airMiles: 12312
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
+		<flow-ref doc:name="getAccountByIdImplementationFlow" doc:id="3bb0d16a-2726-45c3-b2e7-f0f7ff12d393" name="getAccountByIdImplementationFlow"/>
     </flow>
     <flow name="post:\accounts:application\json:account-system-api-config">
-        <logger level="INFO" message="post:\accounts:application\json:account-system-api-config" />
+        <flow-ref doc:name="postAccountsimplementationFlow" doc:id="ca807e68-b49b-4faa-8afa-6f6f702ee298" name="postAccountsImplementationFlow"/>
     </flow>
 </mule>
